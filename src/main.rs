@@ -1,11 +1,19 @@
 mod libpacman;
-use core::str::next_code_point;
+use libpacman::{adjacency_matrix, bfs, count_ghosts, read_value};
 
-use libpacman::{count_ghosts, read_value};
 
-fn main() {
+// Q1
+//fn main() {
+//    let n = read_value::<u32>().unwrap();
+//    println!("{}", count_ghosts(n));
+//}
+
+fn main () {
     let n = read_value::<u32>().unwrap();
-    println!("{}", count_ghosts(n));
-}
 
+//    let map = adjacency_matrix(n);
+//    let counter = bfs(map.pacmanpos, map.graph, |x| x == Tile::Ghost);
+    let counter = bfs(false, std::array::IntoIter::new([false;4]), |b| b == false);
+    dbg!(counter);
+}
 

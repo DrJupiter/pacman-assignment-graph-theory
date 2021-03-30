@@ -18,6 +18,31 @@ pub fn adjacency_matrix(n: usize) {
 
     let v: Vec<Vec<bool>> = Vec::with_capacity(n);
 
+    // loop
+    // false -> edge, true -> no edge
+    // we maintain a stack
+
+    // realistically will you iterate through this graph more than once?
+    for i in (0..n).into_iter() {
+        let mut forward_feed: bool = false;
+
+
+    }
+
+}
+// T must implement the trait Color;
+// T should just be able to corse into Item
+pub fn bfs<T, D, F>(_source: T, graph: D, c_func: F) -> usize where D: IntoIterator<Item = T>, F: Fn(T) -> bool{
+
+    let mut counter = 0;
+
+    for i in graph.into_iter() {
+        if c_func(i) {
+            counter += 1;
+        }
+    }
+
+    return counter
 }
 
 // N S W E
