@@ -113,11 +113,20 @@ impl Map {
     }
 
     fn neighbours(&self, vertex: (usize,usize)) -> [Option<usize>;4] {
-      // (r-1, r+1, c-1, c+1)
-      return [vertex.0.checked_sub(1), vertex.0.checked_add(1), vertex.1.checked_sub(1), vertex.1.checked_add(1) ] 
+    // (r-1, r+1, c-1, c+1)
+    return [range_check(vertex.0, 1, self.len(), |x| x-1), range_check(vertex.0, 0, self.len()-1, |x| x + 1), range_check(vertex.1, 1, self.len(), |x| x-1), range_check(vertex.1, 0, self.len()-1, |x| x + 1)]
 }
 
+}
 
+fn range_check<T,U,F>(arg: T, low: T, high: T, func: F) -> Option<U> where T: PartialOrd, F: Fn(T) -> U {
+    if low <= arg && arg <= high {
+        Some(func(arg))
+    } 
+    else {
+        None
+    }
+}
 
 
 
