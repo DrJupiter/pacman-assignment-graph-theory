@@ -30,6 +30,97 @@ pub fn adjacency_matrix(n: usize) {
     }
 
 }
+
+
+// Potentially change to usize or just use on off mechanics for 
+// multiplayer
+enum Tile {
+    Pacman,
+    Ghost,
+    Blank,
+    Wall,
+}
+
+impl Tile {
+    fn new(c: char) -> Self {
+        match c {
+            ' ' => Tile::Blank,
+            '#' => Tile::Wall,
+            'G' => Tile::Ghost,
+            'P' => Tile::Pacman,
+            _ => panic!(),
+        }
+    }
+
+//    fn flip(&mut self, direction: usize) {
+//       match self {
+//            &mut Tile::Wall => (),
+//            &mut Tile::Blank(ref mut neighbours) => neighbours[direction] = !neighbours[direction],
+//            &mut Tile::Ghost(ref mut neighbours) => neighbours[direction] = !neighbours[direction],
+//            &mut Tile::Pacman(ref mut neighbours) => neighbours[direction] = !neighbours[direction],
+//       } 
+//    }
+}
+
+struct Map {
+    graph: Vec<Vec<Tile>>,
+    pacmen: Vec<(usize,usize)>,  
+    ghosts: Vec<(usize,usize)>,
+}
+
+impl Map {
+
+    fn new(n: usize) -> Self {
+
+        // Allocate space for the vector. n^2 because the map will contain n^2 tiles.
+        let mut graph: Vec<Vec<Tile>> = Vec::with_capacity(n);
+        let mut pacmen: Vec<(usize, usize)> = Vec::new();
+        let mut ghosts: Vec<(usize, usize)> = Vec::new();
+
+        for row_idx in (0..n).into_iter() {
+
+            // We read a new row of the map.
+            let mut s = String::with_capacity(n);
+            io::stdin().read_line(&mut s).expect("could not read from stdin");
+
+            // If only we didn't have to be optimal
+//            let row: Vec<Tile> = s.trim().chars().map(|c| Tile::new(c)).collect();
+//            graph.push(row);            
+        
+        let row: Vec<Tile> = Vec::with_capacity(n);           
+
+        for (col_idx, char ) in s.char_indices() {
+            match c {
+                ' ' => row.push(Tile::Blank),
+                '#' => row.push(Tile::Wall),
+                'G' => {row.push(Tile::Ghost); ghosts.push((row_idx,col_idx));},
+                'P' => {row.push(Tile::Pacman); pacmen.push((row_idx,col_idx));},
+                _ => panic!(),
+            }
+        }
+
+        }
+        
+        Self {
+            graph,
+            pacmen,
+            ghosts,
+        }
+    }
+
+    const fn len(&self) -> usize {
+        return self.graph.len()
+    }
+
+    fn neighbours(&self, vertex: (usize,usize)) -> [Option<usize>;4] {
+      // (r-1, r+1, c-1, c+1)
+      return [vertex.0.checked_sub(1), vertex.0.checked_add(1), vertex.1.checked_sub(1), vertex.1.checked_add(1) ] 
+}
+
+
+
+
+
 // T must implement the trait Color;
 // T should just be able to corse into Item
 pub fn bfs<T, D, F>(_source: T, graph: D, c_func: F) -> usize where D: IntoIterator<Item = T>, F: Fn(T) -> bool{
