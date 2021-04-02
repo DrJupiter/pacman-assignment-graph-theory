@@ -34,7 +34,8 @@ where
 
 // Potentially change to usize or just use on off mechanics for
 // multiplayer
-enum Tile {
+#[derive(Debug, Clone, Copy)]
+pub enum Tile {
     Pacman,
     Ghost,
     Blank,
@@ -53,6 +54,7 @@ impl Tile {
     }
 }
 
+#[derive(Debug)]
 pub struct Map {
     graph: Vec<Vec<Tile>>,
     pacmen: Vec<(usize, usize)>,
@@ -79,7 +81,7 @@ impl Map {
 
             let mut row: Vec<Tile> = Vec::with_capacity(n);
 
-            for (col_idx, char) in s.char_indices() {
+            for (col_idx, char) in s.trim().char_indices() {
                 match char {
                     ' ' => row.push(Tile::Blank),
                     '#' => row.push(Tile::Wall),
@@ -108,7 +110,7 @@ impl Map {
         return self.graph.len();
     }
 
-    fn neighbours(&self, vertex: &(usize, usize)) -> [Option<usize>; 4] {
+    fn neighbours_numbers(&self, vertex: &(usize, usize)) -> [Option<usize>; 4] {
         // (r-1, r+1, c-1, c+1)
         return [
             range_check(vertex.0, 1, self.len(), |x| x - 1),
@@ -116,42 +118,93 @@ impl Map {
             range_check(vertex.1, 1, self.len(), |x| x - 1),
             range_check(vertex.1, 0, self.len() - 1, |x| x + 1),
         ];
+
     }
+
+    fn neighbours(&self, vertex: &(usize, usize)) -> [Option<(usize,usize)>;4] {
+
+     // If only they didn't use 1.43 
+     // let mut n_numbers = std::array::IntoIter::new(self.neighbours_numbers(vertex));
+
+        let _n_numbers = self.neighbours_numbers(vertex);
+
+        let mut n_numbers = _n_numbers.into_iter();
+
+        let mut neighbours: [Option<(usize,usize)>; 4] = [None;4];
+
+        for i in 0..2 {
+            if let Some(n_row) = n_numbers.next().unwrap() {
+                neighbours[i] = Some((*n_row, vertex.1))
+            }
+        }
+
+        for i in 2..4 {
+            if let Some(n_col) = n_numbers.next().unwrap() {
+                neighbours[i] = Some((vertex.0, *n_col))
+            }
+        }
+
+        neighbours
+
+    }
+
+    fn node_type_checked(&self, vertex: (usize,usize)) -> Option<Tile> {
+
+        match self.graph.get(vertex.0) {
+            Some(tile_vec) => {
+                match tile_vec.get(vertex.1) {
+                    Some(tile ) => Some(*tile),
+                    None => None,
+                }
+
+            }
+            None => None,
+        }
+    }
+
+    fn node_type(&self, vertex: &(usize, usize)) -> Tile {
+        self.graph[vertex.0][vertex.1]
+    }
+//        if let Some(tile_vec) = self.graph.get(vertex.0) {
+//            if let Some(tile) = tile_vec.get(vertex.1) {
+//                return Some(*tile)
+//            }
+//            else {
+//                None
+//            }
+//        }  
+//        else {
+//            None
+//        }
+//    }
 }
 
 // This could also be done with HashSet, we can test performance later
 pub struct BreadthFirst<'a> {
-    visited: ColorMarker,
+    marker: ColorMarker,
     // Here it is implicit that the colorgrid and Map Follow the same lookup scheme
-    queue: VecDeque<(usize,usize)>,
+    queue: VecDeque<((usize,usize), Tile, usize)>,
     graph: &'a Map,
 }
 
 impl<'a> BreadthFirst<'a> {
 
     pub fn new(graph: &'a Map, root: (usize,usize)) -> Self {
-        let mut nodes: ColorMarker = ColorMarker::new(graph.len(), graph.len());
-        let mut queue: VecDeque<(usize,usize)> = VecDeque::new();
+        let mut marker: ColorMarker = ColorMarker::new(graph.len(), graph.len());
+        let mut queue: VecDeque<((usize,usize), Tile, usize)> = VecDeque::new();
 
-        let _neighbours: [Option<usize>; 4] = graph.neighbours(&root);
-        let mut neighbours = _neighbours.iter();
 
-        for _ in 0..2 {
-            if let Some(neighbour) = neighbours.next().unwrap() {
-                queue.push_front((*neighbour,root.1))
+        let neighbours = graph.neighbours(&root);
+
+        for neighbour in neighbours.iter() {
+            if let Some(n) = neighbour {
+                queue.push_front((*n, graph.node_type(n), 0))
             }
-        } 
-
-        for _ in 0..2 {
-            if let Some(neighbour) = neighbours.next().unwrap() {
-                queue.push_front((root.0, *neighbour))
-            }
-        } 
-
-        nodes.mark(root);
+        }
+        marker.mark(root);
 
         Self{
-            visited: nodes,
+            marker,
             queue,
             graph,
         }
@@ -161,7 +214,32 @@ impl<'a> BreadthFirst<'a> {
 }
 
 impl<'a> Iterator for BreadthFirst<'a> {
-    type Item = 
+
+            //      Vertex      Vertex Type  Distance 
+    type Item = ((usize,usize), Tile,        usize);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.queue.pop_back() {
+            None => None,
+            Some((vertex, tile, distance)) => {
+            
+                for neighbour in self.graph.neighbours(&vertex).iter() {
+                    if let Some(neighbour) = neighbour {
+                        if self.marker.marked(*neighbour) {
+                            continue;
+                        }
+                        else {
+                            self.queue.push_front((*neighbour, self.graph.node_type(neighbour), distance+1))
+                        }
+                    }
+                }
+                self.marker.mark(vertex);
+                Some((vertex, tile, distance))
+            
+            }
+        }
+    }
+
 }
 
 pub trait Marker {
@@ -278,4 +356,20 @@ pub fn count_ghosts(n: u32) -> u32 {
     }
 
     counter
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn breadth_first() {
+
+        let map: Map = Map::new(3);
+
+        let v = Vec::from(map.neighbours(&map.pacmen[0])); 
+
+        dbg!(v);
+
+    }
 }
