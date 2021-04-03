@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use std::{collections::VecDeque, io, str::FromStr};
 
 pub fn read_value<T: FromStr>() -> Result<T, T::Err> {
@@ -17,6 +18,32 @@ pub fn read_values<T: FromStr>() -> Result<Vec<T>, T::Err> {
         .split_whitespace()
         .map(|word| word.parse())
         .collect()
+}
+
+pub fn print_pretty_slice<T: Display>(slice: &[T]) {
+    let _str = slice
+        .iter()
+        .map(|num| format!("{} ", num.to_string()))
+        .collect::<String>();
+    println!("{}", _str.trim_end());
+}
+
+pub struct Step((usize, usize), Tile, usize);
+
+impl Step {
+    pub fn new(vertex: (usize, usize), tile: Tile, distance: usize) -> Self {
+        Self(vertex, tile, distance)
+    }
+}
+
+impl Display for Step {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Vertex: {} {}, Tile: {}, Distance: {}",
+            self.0 .0, self.0 .1, self.1, self.2
+        )
+    }
 }
 
 fn range_check<T, C, U, F>(arg: T, low: C, high: C, func: F) -> Option<U>
@@ -51,6 +78,18 @@ impl Tile {
             'P' => Tile::Pacman,
             _ => unreachable!(),
         }
+    }
+}
+
+impl Display for Tile {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let t = match self {
+            &Tile::Blank => "Blank",
+            &Tile::Ghost => "Ghost",
+            &Tile::Pacman => "Pacman",
+            &Tile::Wall => "Wall",
+        };
+        write!(f, "{}", t)
     }
 }
 
@@ -106,34 +145,32 @@ impl Map {
         }
     }
 
-    fn from_strings<'a>(string_vec: Vec<&'a str>) -> Self {
+    pub fn from_strings<'a>(string_vec: Vec<&'a str>) -> Self {
         let mut graph: Vec<Vec<Tile>> = Vec::with_capacity(string_vec.len());
         let mut pacmen: Vec<(usize, usize)> = Vec::new();
         let mut ghosts: Vec<(usize, usize)> = Vec::new();
 
-
         let mut s_iter = string_vec.iter();
 
         for row_idx in (0..string_vec.len()).into_iter() {
-
             let mut row: Vec<Tile> = Vec::with_capacity(string_vec.len());
 
             if let Some(s) = s_iter.next() {
-            for (col_idx, char) in s.trim_end_matches("\n").char_indices() {
-                match char {
-                    ' ' => row.push(Tile::Blank),
-                    '#' => row.push(Tile::Wall),
-                    'G' => {
-                        row.push(Tile::Ghost);
-                        ghosts.push((row_idx, col_idx));
+                for (col_idx, char) in s.trim_end_matches("\n").char_indices() {
+                    match char {
+                        ' ' => row.push(Tile::Blank),
+                        '#' => row.push(Tile::Wall),
+                        'G' => {
+                            row.push(Tile::Ghost);
+                            ghosts.push((row_idx, col_idx));
+                        }
+                        'P' => {
+                            row.push(Tile::Pacman);
+                            pacmen.push((row_idx, col_idx));
+                        }
+                        _ => panic!(),
                     }
-                    'P' => {
-                        row.push(Tile::Pacman);
-                        pacmen.push((row_idx, col_idx));
-                    }
-                    _ => panic!(),
                 }
-            }
             }
             graph.push(row)
         }
@@ -143,8 +180,6 @@ impl Map {
             pacmen,
             ghosts,
         }
-
-
     }
 
     fn len(&self) -> usize {
@@ -159,19 +194,17 @@ impl Map {
             range_check(vertex.1, 1, self.len(), |x| x - 1),
             range_check(vertex.1, 0, self.len() - 2, |x| x + 1),
         ];
-
     }
 
-    fn neighbours(&self, vertex: &(usize, usize)) -> [Option<(usize,usize)>;4] {
-
-     // If only they didn't use 1.43 
-     // let mut n_numbers = std::array::IntoIter::new(self.neighbours_numbers(vertex));
+    fn neighbours(&self, vertex: &(usize, usize)) -> [Option<(usize, usize)>; 4] {
+        // If only they didn't use 1.43
+        // let mut n_numbers = std::array::IntoIter::new(self.neighbours_numbers(vertex));
 
         let _n_numbers = self.neighbours_numbers(vertex);
 
         let mut n_numbers = _n_numbers.into_iter();
 
-        let mut neighbours: [Option<(usize,usize)>; 4] = [None;4];
+        let mut neighbours: [Option<(usize, usize)>; 4] = [None; 4];
 
         for i in 0..2 {
             if let Some(n_row) = n_numbers.next().unwrap() {
@@ -186,19 +219,14 @@ impl Map {
         }
 
         neighbours
-
     }
 
-    fn node_type_checked(&self, vertex: &(usize,usize)) -> Option<Tile> {
-
+    fn node_type_checked(&self, vertex: &(usize, usize)) -> Option<Tile> {
         match self.graph.get(vertex.0) {
-            Some(tile_vec) => {
-                match tile_vec.get(vertex.1) {
-                    Some(tile ) => Some(*tile),
-                    None => None,
-                }
-
-            }
+            Some(tile_vec) => match tile_vec.get(vertex.1) {
+                Some(tile) => Some(*tile),
+                None => None,
+            },
             None => None,
         }
     }
@@ -206,88 +234,131 @@ impl Map {
     fn node_type(&self, vertex: &(usize, usize)) -> Tile {
         self.graph[vertex.0][vertex.1]
     }
-//        if let Some(tile_vec) = self.graph.get(vertex.0) {
-//            if let Some(tile) = tile_vec.get(vertex.1) {
-//                return Some(*tile)
-//            }
-//            else {
-//                None
-//            }
-//        }  
-//        else {
-//            None
-//        }
-//    }
-}
 
-// This could also be done with HashSet, we can test performance later
-pub struct BreadthFirst<'a> {
-    marker: ColorMarker,
-    // Here it is implicit that the colorgrid and Map Follow the same lookup scheme
-    queue: VecDeque<((usize,usize), Tile, usize)>,
-    graph: &'a Map,
-}
+    fn adjacent(vertex1: &(usize, usize), vertex2: &(usize, usize)) -> bool {
+        let r_distance = vertex2.0 as isize - vertex1.0 as isize;
+        let c_distance = vertex2.1 as isize - vertex1.1 as isize;
+        r_distance.abs() <= 1 && c_distance.abs() <= 1 
+    }
 
-impl<'a> BreadthFirst<'a> {
-
-    pub fn new(graph: &'a Map, root: &'a (usize,usize)) -> Self {
-//        let mut marker: ColorMarker = ColorMarker::new(graph.len(), graph.len());
-        let marker: ColorMarker = ColorMarker::new(graph.len(), graph.len());
-        let mut queue: VecDeque<((usize,usize), Tile, usize)> = VecDeque::new();
-
-
-//        let neighbours = graph.neighbours(root);
-//
-//        for neighbour in neighbours.iter() {
-//            if let Some(n) = neighbour {
-//                queue.push_front((*n, graph.node_type(n), 1))
-//            }
-//        }
-//        marker.mark(*root);
-        queue.push_front((*root, graph.node_type(&root), 0));
-
-        Self{
-            marker,
-            queue,
-            graph,
-        }
-
+    fn adjacent_delta(vertex1: &(usize, usize), vertex2: &(usize, usize)) -> (bool, (isize, isize)) {
+        let r_distance = vertex2.0 as isize - vertex1.0 as isize;
+        let c_distance = vertex2.1 as isize - vertex1.1 as isize;
+        (r_distance.abs() <= 1 && c_distance.abs() <= 1, (r_distance, c_distance))
     }
 
 }
 
-impl<'a> Iterator for BreadthFirst<'a> {
+// This could also be done with HashSet, we can test performance later
+pub struct BreadthFirst<'a> {
+    pub marker: ColorMarker,
+    // Here it is implicit that the colorgrid and Map Follow the same lookup scheme
+    pub queue: VecDeque<((usize, usize), Tile, usize)>,
+    graph: &'a Map,
+}
 
-            //      Vertex      Vertex Type  Distance 
-    type Item = ((usize,usize), Tile,        usize);
+impl<'a> BreadthFirst<'a> {
+    pub fn new(graph: &'a Map, root: &'a (usize, usize)) -> Self {
+        //        let mut marker: ColorMarker = ColorMarker::new(graph.len(), graph.len());
+        let marker: ColorMarker = ColorMarker::new(graph.len(), graph.len());
+        let mut queue: VecDeque<((usize, usize), Tile, usize)> = VecDeque::new();
+
+        //        let neighbours = graph.neighbours(root);
+        //
+        //        for neighbour in neighbours.iter() {
+        //            if let Some(n) = neighbour {
+        //                queue.push_front((*n, graph.node_type(n), 1))
+        //            }
+        //        }
+        //        marker.mark(*root);
+        queue.push_front((*root, graph.node_type(&root), 0));
+
+        Self {
+            marker,
+            queue,
+            graph,
+        }
+    }
+
+   pub fn backtrace_path(search: &[((usize, usize), Tile, usize)], root_idx: usize, target_idx: usize) -> Vec<char> {
+
+
+
+   let search_interval: &[((usize, usize), Tile, usize)]   = &search[root_idx..target_idx];
+
+   let (mut current_vertex, mut current_distace) = (&search[target_idx].0, &search[target_idx].2);
+
+   //let mut direction_string: String = String::with_capacity(search_interval.len());
+   let mut direction_string: Vec<char> = Vec::with_capacity(search_interval.len());
+
+   for (vertex, tile, distance) in search_interval.iter().rev() {
+        if distance == current_distace {
+            continue
+        }  
+        else {
+            //let delta: (isize, isize) = (vertex.0 as isize - current_vertex.0 as isize, vertex.1 as isize - current_vertex.1 as isize);
+            match Map::adjacent_delta(current_vertex, vertex) {
+                (false, _) => (),
+                (true, delta) => {direction_string.push(Self::backtrace_direction(delta)); current_vertex = vertex; current_distace = distance;}, 
+            }
+        }
+   }
+
+   direction_string.reverse();
+   direction_string
+
+   }
+
+   fn forwardtrace_direction(delta: (isize, isize)) -> char {
+       match delta {
+           (-1, 0) => 'N',
+           (0, 1) => 'E',
+           (0, -1) => 'W',
+           (1, 0) => 'S',
+           _ => unreachable!(),
+       }
+   }
+
+
+   fn backtrace_direction(delta: (isize, isize)) -> char {
+       match delta {
+           (-1, 0) => 'S',
+           (0, 1) => 'W',
+           (0, -1) => 'E',
+           (1, 0) => 'N',
+           _ => unreachable!(),
+       }
+   }
+
+}
+
+impl<'a> Iterator for BreadthFirst<'a> {
+    //      Vertex      Vertex Type  Distance
+    type Item = ((usize, usize), Tile, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.queue.pop_back() {
             None => None,
             Some((vertex, tile, distance)) => {
-            
                 for neighbour in self.graph.neighbours(&vertex).iter() {
                     if let Some(neighbour) = neighbour {
                         if self.marker.marked_or_mark(*neighbour) {
                             continue;
-                        }
-                        else {
+                        } else {
                             let tile = self.graph.node_type(neighbour);
                             if tile == Tile::Wall {
                                 continue;
-                            }
-                            else { self.queue.push_front((*neighbour, tile, distance+1)) 
+                            } else {
+                                self.queue.push_front((*neighbour, tile, distance + 1))
                             }
                         }
                     }
                 }
-//                self.marker.mark(vertex);
+                //                self.marker.mark(vertex);
                 Some((vertex, tile, distance))
-            
             }
         }
     }
-
 }
 
 pub trait Marker {
@@ -320,7 +391,7 @@ impl Color {
 }
 
 #[derive(Debug)]
-struct ColorMarker {
+pub struct ColorMarker {
     color_grid: Vec<Vec<Color>>,
 }
 
@@ -334,11 +405,10 @@ impl ColorMarker {
 }
 
 impl Marker for ColorMarker {
-
     type Index = (usize, usize);
 
     fn mark(&mut self, idx: Self::Index) {
-       self.color_grid[idx.0][idx.1] = Color::Black; 
+        self.color_grid[idx.0][idx.1] = Color::Black;
     }
 
     fn marked(&self, idx: Self::Index) -> bool {
@@ -348,13 +418,11 @@ impl Marker for ColorMarker {
     fn marked_or_mark(&mut self, idx: Self::Index) -> bool {
         if self.marked(idx) {
             true
-        }
-        else {
+        } else {
             self.mark(idx);
             false
         }
     }
-
 }
 
 // T must implement the trait Color;
@@ -410,9 +478,8 @@ pub fn count_ghosts(n: u32) -> u32 {
 mod tests {
     use super::*;
 
-
     #[test]
-    fn map_from_strings () {
+    fn map_from_strings() {
         let s_vec = vec!["  P", "  #", "G #"];
 
         let map = Map::from_strings(s_vec);
@@ -421,16 +488,15 @@ mod tests {
     }
     #[test]
     fn breadth_first() {
-
         let map: Map = Map::new(3);
 
-//        let v = Vec::from(map.neighbours(&map.pacmen[0])); 
+        //        let v = Vec::from(map.neighbours(&map.pacmen[0]));
 
- //       dbg!(v);
+        //       dbg!(v);
 
-        let bfs: BreadthFirst = BreadthFirst::new(&map, &(0,0));
+        let bfs: BreadthFirst = BreadthFirst::new(&map, &(0, 0));
         println!("Queue: {:?}", bfs.queue);
-        //map.graph[0][2];  
+        //map.graph[0][2];
         let v: Vec<_> = bfs.into_iter().collect();
 
         println!("{:?}", v);
@@ -438,7 +504,5 @@ mod tests {
         //for s in bfs.into_iter() {
         //    println!("{:?}", s);
         //}
-
-
     }
 }
