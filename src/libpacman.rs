@@ -1,33 +1,9 @@
 use std::fmt::{Display, Formatter};
 use std::{collections::VecDeque, io, str::FromStr};
 
-pub fn read_value<T: FromStr>() -> Result<T, T::Err> {
-    let mut s = String::new();
-    io::stdin()
-        .read_line(&mut s)
-        .expect("could not read from stdin");
-    s.trim().parse()
-}
+//    // Structs and implements
 
-pub fn read_values<T: FromStr>() -> Result<Vec<T>, T::Err> {
-    let mut s = String::new();
-    io::stdin()
-        .read_line(&mut s)
-        .expect("could not read from stdin");
-    s.trim()
-        .split_whitespace()
-        .map(|word| word.parse())
-        .collect()
-}
-
-pub fn print_pretty_slice<T: Display>(slice: &[T]) {
-    let _str = slice
-        .iter()
-        .map(|num| format!("{} ", num.to_string()))
-        .collect::<String>();
-    println!("{}", _str.trim_end());
-}
-
+// Step struct and impl
 pub struct Step((usize, usize), Tile, usize);
 
 impl Step {
@@ -46,21 +22,8 @@ impl Display for Step {
     }
 }
 
-fn range_check<T, C, U, F>(arg: T, low: C, high: C, func: F) -> Option<U>
-where
-    T: PartialOrd<C>,
-    C: PartialOrd<T>,
-    F: Fn(T) -> U,
-{
-    if low <= arg && arg <= high {
-        Some(func(arg))
-    } else {
-        None
-    }
-}
 
-// Potentially change to usize or just use on off mechanics for
-// multiplayer
+// Tile struct and impl
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Tile {
     Pacman,
@@ -93,6 +56,8 @@ impl Display for Tile {
     }
 }
 
+
+// Map struct and impl
 #[derive(Debug)]
 pub struct Map {
     pub graph: Vec<Vec<Tile>>,
@@ -249,7 +214,8 @@ impl Map {
 
 }
 
-// This could also be done with HashSet, we can test performance later
+
+// BFS stract and impl
 pub struct BreadthFirst<'a> {
     pub marker: ColorMarker,
     // Here it is implicit that the colorgrid and Map Follow the same lookup scheme
@@ -361,16 +327,8 @@ impl<'a> Iterator for BreadthFirst<'a> {
     }
 }
 
-pub trait Marker {
-    type Index;
 
-    fn marked(&self, idx: Self::Index) -> bool;
-
-    fn marked_or_mark(&mut self, idx: Self::Index) -> bool;
-
-    fn mark(&mut self, idx: Self::Index);
-}
-
+// Color enum
 #[derive(Debug, PartialEq)]
 enum Color {
     White,
@@ -390,6 +348,17 @@ impl Color {
     }
 }
 
+
+// Colormarker struct and impl
+pub trait Marker {
+    type Index;
+
+    fn marked(&self, idx: Self::Index) -> bool;
+
+    fn marked_or_mark(&mut self, idx: Self::Index) -> bool;
+
+    fn mark(&mut self, idx: Self::Index);
+}
 #[derive(Debug)]
 pub struct ColorMarker {
     color_grid: Vec<Vec<Color>>,
@@ -425,35 +394,41 @@ impl Marker for ColorMarker {
     }
 }
 
-// T must implement the trait Color;
-// T should just be able to corse into Item
-pub fn counter<T, D, F>(graph: D, c_func: F) -> usize
+
+
+//    // Standalone functions
+
+fn range_check<T, C, U, F>(arg: T, low: C, high: C, func: F) -> Option<U>
 where
-    D: IntoIterator<Item = T>,
-    F: Fn(T) -> bool,
+    T: PartialOrd<C>,
+    C: PartialOrd<T>,
+    F: Fn(T) -> U,
 {
-    let mut counter = 0;
-
-    for i in graph.into_iter() {
-        if c_func(i) {
-            counter += 1;
-        }
+    if low <= arg && arg <= high {
+        Some(func(arg))
+    } else {
+        None
     }
-
-    return counter;
 }
 
-// N S W E
+pub fn counter<T, D, F>(graph: D, c_func: F) -> usize
+    where
+        D: IntoIterator<Item = T>,
+        F: Fn(T) -> bool,
+    {
+        let mut counter = 0;
 
-// fn parse_tile(c: char) {
-//     match c {
-//         '#' => 0,
-//         ' ' => 1,
-//     }
-// }
+        for i in graph.into_iter() {
+            if c_func(i) {
+                counter += 1;
+            }
+        }
 
-/// Takes an integer n and reads n lines from stdin
-/// and counts the number of ghost occurences
+        return counter;
+    }
+
+// Takes an integer n and reads n lines from stdin
+// and counts the number of ghost occurences
 pub fn count_ghosts(n: u32) -> u32 {
     let mut counter = 0;
 
@@ -474,6 +449,41 @@ pub fn count_ghosts(n: u32) -> u32 {
     counter
 }
 
+
+
+
+//    // lowkey functions
+pub fn read_value<T: FromStr>() -> Result<T, T::Err> {
+    let mut s = String::new();
+    io::stdin()
+        .read_line(&mut s)
+        .expect("could not read from stdin");
+    s.trim().parse()
+}
+
+pub fn read_values<T: FromStr>() -> Result<Vec<T>, T::Err> {
+    let mut s = String::new();
+    io::stdin()
+        .read_line(&mut s)
+        .expect("could not read from stdin");
+    s.trim()
+        .split_whitespace()
+        .map(|word| word.parse())
+        .collect()
+}
+
+pub fn print_pretty_slice<T: Display>(slice: &[T]) {
+    let _str = slice
+        .iter()
+        .map(|num| format!("{} ", num.to_string()))
+        .collect::<String>();
+    println!("{}", _str.trim_end());
+}
+
+
+
+
+// Tests
 #[cfg(test)]
 mod tests {
     use super::*;
