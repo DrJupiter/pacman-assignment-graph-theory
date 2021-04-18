@@ -238,15 +238,20 @@ impl Map {
     fn adjacent(vertex1: &(usize, usize), vertex2: &(usize, usize)) -> bool {
         let r_distance = vertex2.0 as isize - vertex1.0 as isize;
         let c_distance = vertex2.1 as isize - vertex1.1 as isize;
-        r_distance.abs() <= 1 && c_distance.abs() <= 1 
+        r_distance.abs() <= 1 && c_distance.abs() <= 1
     }
 
-    fn adjacent_delta(vertex1: &(usize, usize), vertex2: &(usize, usize)) -> (bool, (isize, isize)) {
+    fn adjacent_delta(
+        vertex1: &(usize, usize),
+        vertex2: &(usize, usize),
+    ) -> (bool, (isize, isize)) {
         let r_distance = vertex2.0 as isize - vertex1.0 as isize;
         let c_distance = vertex2.1 as isize - vertex1.1 as isize;
-        (r_distance.abs() <= 1 && c_distance.abs() <= 1, (r_distance, c_distance))
+        (
+            r_distance.abs() <= 1 && c_distance.abs() <= 1,
+            (r_distance, c_distance),
+        )
     }
-
 }
 
 // This could also be done with HashSet, we can test performance later
@@ -260,7 +265,7 @@ pub struct BreadthFirst<'a> {
 impl<'a> BreadthFirst<'a> {
     pub fn new(graph: &'a Map, root: &'a (usize, usize)) -> Self {
         //        let mut marker: ColorMarker = ColorMarker::new(graph.len(), graph.len());
-        let marker: ColorMarker = ColorMarker::new(graph.len(), graph.len());
+        let mut marker: ColorMarker = ColorMarker::new(graph.len(), graph.len());
         let mut queue: VecDeque<((usize, usize), Tile, usize)> = VecDeque::new();
 
         //        let neighbours = graph.neighbours(root);
@@ -270,7 +275,8 @@ impl<'a> BreadthFirst<'a> {
         //                queue.push_front((*n, graph.node_type(n), 1))
         //            }
         //        }
-        //        marker.mark(*root);
+
+        marker.mark(*root);
         queue.push_front((*root, graph.node_type(&root), 0));
 
         Self {
@@ -280,56 +286,58 @@ impl<'a> BreadthFirst<'a> {
         }
     }
 
-   pub fn backtrace_path(search: &[((usize, usize), Tile, usize)], root_idx: usize, target_idx: usize) -> Vec<char> {
+    pub fn backtrace_path(
+        search: &[((usize, usize), Tile, usize)],
+        root_idx: usize,
+        target_idx: usize,
+    ) -> Vec<char> {
+        let search_interval: &[((usize, usize), Tile, usize)] = &search[root_idx..target_idx];
 
+        let (mut current_vertex, mut current_distace) =
+            (&search[target_idx].0, &search[target_idx].2);
 
+        //let mut direction_string: String = String::with_capacity(search_interval.len());
+        let mut direction_string: Vec<char> = Vec::with_capacity(search_interval.len());
 
-   let search_interval: &[((usize, usize), Tile, usize)]   = &search[root_idx..target_idx];
-
-   let (mut current_vertex, mut current_distace) = (&search[target_idx].0, &search[target_idx].2);
-
-   //let mut direction_string: String = String::with_capacity(search_interval.len());
-   let mut direction_string: Vec<char> = Vec::with_capacity(search_interval.len());
-
-   for (vertex, tile, distance) in search_interval.iter().rev() {
-        if distance == current_distace {
-            continue
-        }  
-        else {
-            //let delta: (isize, isize) = (vertex.0 as isize - current_vertex.0 as isize, vertex.1 as isize - current_vertex.1 as isize);
-            match Map::adjacent_delta(current_vertex, vertex) {
-                (false, _) => (),
-                (true, delta) => {direction_string.push(Self::backtrace_direction(delta)); current_vertex = vertex; current_distace = distance;}, 
+        for (vertex, tile, distance) in search_interval.iter().rev() {
+            if distance == current_distace {
+                continue;
+            } else {
+                //let delta: (isize, isize) = (vertex.0 as isize - current_vertex.0 as isize, vertex.1 as isize - current_vertex.1 as isize);
+                match Map::adjacent_delta(current_vertex, vertex) {
+                    (false, _) => (),
+                    (true, delta) => {
+                        direction_string.push(Self::backtrace_direction(delta));
+                        current_vertex = vertex;
+                        current_distace = distance;
+                    }
+                }
             }
         }
-   }
 
-   direction_string.reverse();
-   direction_string
+        direction_string.reverse();
+        direction_string
+    }
 
-   }
+    fn forwardtrace_direction(delta: (isize, isize)) -> char {
+        match delta {
+            (-1, 0) => 'N',
+            (0, 1) => 'E',
+            (0, -1) => 'W',
+            (1, 0) => 'S',
+            _ => unreachable!(),
+        }
+    }
 
-   fn forwardtrace_direction(delta: (isize, isize)) -> char {
-       match delta {
-           (-1, 0) => 'N',
-           (0, 1) => 'E',
-           (0, -1) => 'W',
-           (1, 0) => 'S',
-           _ => unreachable!(),
-       }
-   }
-
-
-   fn backtrace_direction(delta: (isize, isize)) -> char {
-       match delta {
-           (-1, 0) => 'S',
-           (0, 1) => 'W',
-           (0, -1) => 'E',
-           (1, 0) => 'N',
-           _ => unreachable!(),
-       }
-   }
-
+    fn backtrace_direction(delta: (isize, isize)) -> char {
+        match delta {
+            (-1, 0) => 'S',
+            (0, 1) => 'W',
+            (0, -1) => 'E',
+            (1, 0) => 'N',
+            _ => unreachable!(),
+        }
+    }
 }
 
 impl<'a> Iterator for BreadthFirst<'a> {
